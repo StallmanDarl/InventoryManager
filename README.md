@@ -78,7 +78,7 @@ Item names must be unique regardless of capitalization. For example, `Laptop Cha
 Open PowerShell or another terminal and run:
 
 ```powershell
-git clone https://github.com/YOUR-USERNAME/InventoryManager.git
+git clone https://github.com/StallmanDarl/InventoryManager.git
 ```
 
 Replace `YOUR-USERNAME` with the GitHub username that owns the repository.
