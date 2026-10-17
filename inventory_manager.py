@@ -221,3 +221,71 @@ def search_inventory(inventory):
             f"{number}. {item['name']} | {item['category']} | "
             f"Quantity: {item['quantity']}"
         )
+
+
+def display_summary(inventory):
+    """Display inventory totals and counts by category."""
+    total_quantity = 0
+    low_stock_count = 0
+    category_counts = {}
+
+    for item in inventory:
+        total_quantity += item["quantity"]
+
+        if item["quantity"] < 5:
+            low_stock_count += 1
+
+        category_key = item["category"].casefold()
+
+        if category_key not in category_counts:
+            category_counts[category_key] = {
+                "name": item["category"],
+                "count": 0
+            }
+
+        category_counts[category_key]["count"] += 1
+
+    print("\nInventory Summary")
+    print(f"Unique items: {len(inventory)}")
+    print(f"Total quantity: {total_quantity}")
+    print(f"Low-stock items: {low_stock_count}")
+
+    print("\nItems by category:")
+
+    if not category_counts:
+        print("No categories found.")
+        return
+
+    for category in category_counts.values():
+        print(f"{category['name']}: {category['count']}")
+
+
+def main():
+    """Load inventory and run the main menu loop."""
+    inventory = load_inventory(INVENTORY_FILE)
+
+    while True:
+        display_menu()
+        choice = input("Select an option (1-7): ").strip()
+
+        if choice == "1":
+            view_inventory(inventory)
+        elif choice == "2":
+            add_item(inventory)
+        elif choice == "3":
+            update_quantity(inventory)
+        elif choice == "4":
+            remove_item(inventory)
+        elif choice == "5":
+            search_inventory(inventory)
+        elif choice == "6":
+            display_summary(inventory)
+        elif choice == "7":
+            print("Goodbye!")
+            break
+        else:
+            print("Invalid option. Please enter a number from 1 to 7.")
+
+
+if __name__ == "__main__":
+    main()
