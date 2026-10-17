@@ -194,3 +194,30 @@ def remove_item(inventory):
     print(f"Item removed: {removed_item['name']}")
 
     save_inventory(inventory, INVENTORY_FILE)
+
+
+def search_inventory(inventory):
+    """Search item names using case-insensitive partial matching."""
+    term = input("Enter an item name to search for: ").strip()
+
+    if not term:
+        print("Search term cannot be empty.")
+        return
+
+    matches = []
+
+    for item in inventory:
+        if term.casefold() in item["name"].casefold():
+            matches.append(item)
+
+    if not matches:
+        print("No inventory items matched your search.")
+        return
+
+    print("\nSearch Results:")
+
+    for number, item in enumerate(matches, start=1):
+        print(
+            f"{number}. {item['name']} | {item['category']} | "
+            f"Quantity: {item['quantity']}"
+        )
