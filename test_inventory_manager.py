@@ -6,7 +6,8 @@ from inventory_manager import (
     find_matching_items,
     remove_item_by_number,
     update_item_quantity,
-    validate_new_item
+    validate_new_item,
+    calculate_summary
 )
 
 # --------------------------------------------------
@@ -427,3 +428,105 @@ def test_validate_invalid_quantity(sample_inventory, quantity):
 
     # Assert
     assert result is False
+
+# --------------------------------------------------
+# Inventory Summary Tests
+# --------------------------------------------------
+
+def test_summary_unique_items(sample_inventory):
+    # Arrange
+    expected = 4
+
+    # Act
+    summary = calculate_summary(sample_inventory)
+
+    # Assert
+    assert summary["unique_items"] == expected
+
+
+def test_summary_total_quantity(sample_inventory):
+    # Arrange
+    expected = 21
+
+    # Act
+    summary = calculate_summary(sample_inventory)
+
+    # Assert
+    assert summary["total_quantity"] == expected
+
+
+def test_summary_low_stock_count(sample_inventory):
+    # Arrange
+    expected = 2
+
+    # Act
+    summary = calculate_summary(sample_inventory)
+
+    # Assert
+    assert summary["low_stock_items"] == expected
+
+
+@pytest.mark.parametrize(
+    "quantity, expected_low_stock",
+    [
+        (4, 1),
+        (5, 0)
+    ],
+    ids=["quantity-four-is-low", "quantity-five-is-not-low"]
+)
+def test_summary_low_stock_boundary(quantity, expected_low_stock):
+    # Arrange
+    inventory = [
+        {"name": "Test Item", "category": "Tools", "quantity": quantity}
+    ]
+
+    # Act
+    summary = calculate_summary(inventory)
+
+    # Assert
+    assert summary["low_stock_items"] == expected_low_stock
+
+
+def test_summary_category_counts(sample_inventory):
+    # Arrange
+    expected_tools = 2
+    expected_food = 2
+
+    # Act
+    summary = calculate_summary(sample_inventory)
+
+    # Assert
+    assert summary["categories"]["tools"]["count"] == expected_tools
+    assert summary["categories"]["food"]["count"] == expected_food
+
+
+def test_summary_category_case_insensitive():
+    # Arrange
+    inventory = [
+        {"name": "Hammer", "category": "Tools", "quantity": 10},
+        {"name": "Wrench", "category": "TOOLS", "quantity": 5},
+        {"name": "Apple", "category": "Food", "quantity": 3}
+    ]
+
+    # Act
+    summary = calculate_summary(inventory)
+
+    # Assert
+    assert summary["categories"]["tools"]["count"] == 2
+    assert summary["categories"]["food"]["count"] == 1
+
+
+def test_summary_empty_inventory(empty_inventory):
+    # Arrange
+    expected = {
+        "unique_items": 0,
+        "total_quantity": 0,
+        "low_stock_items": 0,
+        "categories": {}
+    }
+
+    # Act
+    summary = calculate_summary(empty_inventory)
+
+    # Assert
+    assert summary == expected
