@@ -1,5 +1,8 @@
+import pytest
+
 from inventory_manager import (
-    load_inventory
+    load_inventory,
+    save_inventory
 )
 
 # --------------------------------------------------
@@ -91,3 +94,49 @@ def test_load_missing_file(tmp_path):
 
     # Assert
     assert inventory == []
+
+# --------------------------------------------------
+# File Saving Tests
+# --------------------------------------------------
+
+def test_save_multiple_items(tmp_path, sample_inventory):
+    # Arrange
+    file_path = tmp_path / "inventory.txt"
+
+    expected = (
+        "Hammer|Tools|10\n"
+        "Screwdriver|Tools|4\n"
+        "Apple|Food|5\n"
+        "Bread|Food|2\n"
+    )
+
+    # Act
+    save_inventory(sample_inventory, file_path)
+    contents = file_path.read_text(encoding="utf-8")
+
+    # Assert
+    assert contents == expected
+
+
+def test_save_empty_inventory(tmp_path, empty_inventory):
+    # Arrange
+    file_path = tmp_path / "inventory.txt"
+
+    # Act
+    save_inventory(empty_inventory, file_path)
+    contents = file_path.read_text(encoding="utf-8")
+
+    # Assert
+    assert contents == ""
+
+
+def test_save_load_round_trip(tmp_path, sample_inventory):
+    # Arrange
+    file_path = tmp_path / "inventory.txt"
+
+    # Act
+    save_inventory(sample_inventory, file_path)
+    loaded_inventory = load_inventory(file_path)
+
+    # Assert
+    assert loaded_inventory == sample_inventory
