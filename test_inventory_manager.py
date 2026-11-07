@@ -2,7 +2,9 @@ import pytest
 
 from inventory_manager import (
     load_inventory,
-    save_inventory
+    save_inventory,
+    find_matching_items,
+    remove_item_by_number
 )
 
 # --------------------------------------------------
@@ -140,3 +142,132 @@ def test_save_load_round_trip(tmp_path, sample_inventory):
 
     # Assert
     assert loaded_inventory == sample_inventory
+
+# --------------------------------------------------
+# Search Tests
+# --------------------------------------------------
+
+def test_search_exact_name(sample_inventory):
+    # Arrange
+    search_term = "Hammer"
+
+    # Act
+    matches = find_matching_items(sample_inventory, search_term)
+
+    # Assert
+    assert matches == [sample_inventory[0]]
+
+
+def test_search_partial_name(sample_inventory):
+    # Arrange
+    search_term = "Ham"
+
+    # Act
+    matches = find_matching_items(sample_inventory, search_term)
+
+    # Assert
+    assert matches == [sample_inventory[0]]
+
+
+def test_search_ignores_capitalization(sample_inventory):
+    # Arrange
+    search_term = "HAMMER"
+
+    # Act
+    matches = find_matching_items(sample_inventory, search_term)
+
+    # Assert
+    assert matches == [sample_inventory[0]]
+
+
+def test_search_multiple_matches():
+    # Arrange
+    inventory = [
+        {"name": "Red Apple", "category": "Food", "quantity": 5},
+        {"name": "Green Apple", "category": "Food", "quantity": 3},
+        {"name": "Hammer", "category": "Tools", "quantity": 10}
+    ]
+
+    # Act
+    matches = find_matching_items(inventory, "Apple")
+
+    # Assert
+    assert len(matches) == 2
+    assert matches[0]["name"] == "Red Apple"
+    assert matches[1]["name"] == "Green Apple"
+
+
+def test_search_no_matches(sample_inventory):
+    # Arrange
+    search_term = "Computer"
+
+    # Act
+    matches = find_matching_items(sample_inventory, search_term)
+
+    # Assert
+    assert matches == []
+
+
+@pytest.mark.parametrize(
+    "search_term",
+    ["", " ", "   "],
+    ids=["empty", "one-space", "multiple-spaces"]
+)
+def test_search_empty_or_whitespace(sample_inventory, search_term):
+    # Arrange
+    expected = []
+
+    # Act
+    matches = find_matching_items(sample_inventory, search_term)
+
+    # Assert
+    assert matches == expected
+
+
+# --------------------------------------------------
+# Remove-Item Tests
+# --------------------------------------------------
+
+@pytest.mark.parametrize(
+    "item_number, expected_removed, expected_remaining",
+    [
+        (1, "Hammer", ["Screwdriver", "Apple", "Bread"]),
+        (2, "Screwdriver", ["Hammer", "Apple", "Bread"]),
+        (4, "Bread", ["Hammer", "Screwdriver", "Apple"])
+    ],
+    ids=["remove-first", "remove-middle", "remove-last"]
+)
+def test_remove_item_positions(
+    sample_inventory,
+    item_number,
+    expected_removed,
+    expected_remaining
+):
+    # Arrange
+    inventory = sample_inventory
+
+    # Act
+    removed = remove_item_by_number(inventory, item_number)
+
+    remaining_names = [item["name"] for item in inventory]
+
+    # Assert
+    assert removed["name"] == expected_removed
+    assert remaining_names == expected_remaining
+
+
+@pytest.mark.parametrize(
+    "item_number",
+    [0, -1, 5, 100],
+    ids=["zero", "negative", "one-past-end", "far-out-of-range"]
+)
+def test_remove_invalid_item_number(sample_inventory, item_number):
+    # Arrange
+    original_inventory = [item.copy() for item in sample_inventory]
+
+    # Act
+    removed = remove_item_by_number(sample_inventory, item_number)
+
+    # Assert
+    assert removed is None
+    assert sample_inventory == original_inventory
