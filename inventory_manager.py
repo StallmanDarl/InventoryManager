@@ -59,6 +59,103 @@ def save_inventory(inventory, filename):
                 f"{item['quantity']}\n"
             )
 
+def find_matching_items(inventory, search_term):
+    """Return items whose names partially match the search term."""
+    if not isinstance(search_term, str) or not search_term.strip():
+        return []
+
+    search_term = search_term.strip().casefold()
+
+    return [
+        item for item in inventory
+        if search_term in item["name"].casefold()
+    ]
+
+
+def remove_item_by_number(inventory, item_number):
+    """Remove and return an item using its numbered position."""
+    if not isinstance(item_number, int) or isinstance(item_number, bool):
+        return None
+
+    if item_number < 1 or item_number > len(inventory):
+        return None
+
+    return inventory.pop(item_number - 1)
+
+
+def update_item_quantity(inventory, item_number, new_quantity):
+    """Update an item's quantity and return whether it succeeded."""
+    if not isinstance(item_number, int) or isinstance(item_number, bool):
+        return False
+
+    if item_number < 1 or item_number > len(inventory):
+        return False
+
+    if not isinstance(new_quantity, int) or isinstance(new_quantity, bool):
+        return False
+
+    if new_quantity < 0:
+        return False
+
+    inventory[item_number - 1]["quantity"] = new_quantity
+
+    return True
+
+
+def calculate_summary(inventory):
+    """Calculate inventory totals and category counts."""
+    total_quantity = sum(
+        item["quantity"] for item in inventory
+    )
+
+    low_stock_count = sum(
+        1 for item in inventory
+        if item["quantity"] < 5
+    )
+
+    category_counts = {}
+
+    for item in inventory:
+        category_key = item["category"].casefold()
+
+        if category_key not in category_counts:
+            category_counts[category_key] = {
+                "name": item["category"],
+                "count": 0
+            }
+
+        category_counts[category_key]["count"] += 1
+
+    return {
+        "unique_items": len(inventory),
+        "total_quantity": total_quantity,
+        "low_stock_items": low_stock_count,
+        "categories": category_counts
+    }
+
+
+def validate_new_item(inventory, name, category, quantity):
+    """Validate a new inventory item's information."""
+    if not isinstance(name, str) or not name.strip():
+        return False
+
+    if not isinstance(category, str) or not category.strip():
+        return False
+
+    if "|" in name or "|" in category:
+        return False
+
+    if not isinstance(quantity, int) or isinstance(quantity, bool):
+        return False
+
+    if quantity < 0:
+        return False
+
+    for item in inventory:
+        if item["name"].casefold() == name.strip().casefold():
+            return False
+        
+    return True
 
 def view_inventory(inventory):
     """Display all inventory items in a numbered list."""
@@ -98,11 +195,6 @@ def add_item(inventory):
         print("Item name cannot contain '|'.")
         return
 
-    for item in inventory:
-        if item["name"].casefold() == name.casefold():
-            print("An item with that name already exists.")
-            return
-
     category = input("Enter the category: ").strip()
 
     if not category:
@@ -116,6 +208,10 @@ def add_item(inventory):
     quantity = get_nonnegative_quantity("Enter the quantity: ")
 
     if quantity is None:
+        return
+
+    if not validate_new_item(inventory, name, category, quantity):
+        print("An item with that name already exists.")
         return
 
     inventory.append({
@@ -157,8 +253,11 @@ def update_quantity(inventory):
     if quantity is None:
         return
 
+    if not update_item_quantity(inventory, number, quantity):
+        print("Unable to update item quantity.")
+        return
+
     item = inventory[number - 1]
-    item["quantity"] = quantity
 
     print(
         f"{item['name']} quantity updated to {quantity}."
@@ -185,11 +284,11 @@ def remove_item(inventory):
 
     number = int(selection)
 
-    if number < 1 or number > len(inventory):
+    removed_item = remove_item_by_number(inventory, number)
+
+    if removed_item is None:
         print("Invalid item number.")
         return
-
-    removed_item = inventory.pop(number - 1)
 
     print(f"Item removed: {removed_item['name']}")
 
@@ -204,11 +303,7 @@ def search_inventory(inventory):
         print("Search term cannot be empty.")
         return
 
-    matches = []
-
-    for item in inventory:
-        if term.casefold() in item["name"].casefold():
-            matches.append(item)
+    matches = find_matching_items(inventory, term)
 
     if not matches:
         print("No inventory items matched your search.")
@@ -225,40 +320,21 @@ def search_inventory(inventory):
 
 def display_summary(inventory):
     """Display inventory totals and counts by category."""
-    total_quantity = 0
-    low_stock_count = 0
-    category_counts = {}
-
-    for item in inventory:
-        total_quantity += item["quantity"]
-
-        if item["quantity"] < 5:
-            low_stock_count += 1
-
-        category_key = item["category"].casefold()
-
-        if category_key not in category_counts:
-            category_counts[category_key] = {
-                "name": item["category"],
-                "count": 0
-            }
-
-        category_counts[category_key]["count"] += 1
+    summary = calculate_summary(inventory)
 
     print("\nInventory Summary")
-    print(f"Unique items: {len(inventory)}")
-    print(f"Total quantity: {total_quantity}")
-    print(f"Low-stock items: {low_stock_count}")
+    print(f"Unique items: {summary['unique_items']}")
+    print(f"Total quantity: {summary['total_quantity']}")
+    print(f"Low-stock items: {summary['low_stock_items']}")
 
     print("\nItems by category:")
 
-    if not category_counts:
+    if not summary["categories"]:
         print("No categories found.")
         return
 
-    for category in category_counts.values():
+    for category in summary["categories"].values():
         print(f"{category['name']}: {category['count']}")
-
 
 def main():
     """Load inventory and run the main menu loop."""
