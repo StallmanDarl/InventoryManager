@@ -4,7 +4,9 @@ from inventory_manager import (
     load_inventory,
     save_inventory,
     find_matching_items,
-    remove_item_by_number
+    remove_item_by_number,
+    update_item_quantity,
+    validate_new_item
 )
 
 # --------------------------------------------------
@@ -271,3 +273,157 @@ def test_remove_invalid_item_number(sample_inventory, item_number):
     # Assert
     assert removed is None
     assert sample_inventory == original_inventory
+
+# --------------------------------------------------
+# Update-Quantity Tests
+# --------------------------------------------------
+
+def test_update_valid_quantity(sample_inventory):
+    # Arrange
+    item_number = 1
+    new_quantity = 20
+
+    # Act
+    result = update_item_quantity(
+        sample_inventory, item_number, new_quantity
+    )
+
+    # Assert
+    assert result is True
+    assert sample_inventory[0]["quantity"] == 20
+
+
+def test_update_quantity_to_zero(sample_inventory):
+    # Arrange
+    item_number = 1
+    new_quantity = 0
+
+    # Act
+    result = update_item_quantity(
+        sample_inventory, item_number, new_quantity
+    )
+
+    # Assert
+    assert result is True
+    assert sample_inventory[0]["quantity"] == 0
+
+
+def test_update_correct_item_only(sample_inventory):
+    # Arrange
+    original_other_items = [
+        item.copy() for item in sample_inventory[1:]
+    ]
+
+    # Act
+    result = update_item_quantity(sample_inventory, 2, 15)
+
+    # Assert
+    assert result is True
+    assert sample_inventory[1]["quantity"] == 15
+    assert sample_inventory[0]["quantity"] == 10
+    assert sample_inventory[2:] == original_other_items
+
+
+@pytest.mark.parametrize(
+    "item_number",
+    [0, -1, 5, 100],
+    ids=["zero", "negative", "one-past-end", "far-out-of-range"]
+)
+def test_update_invalid_item_number(sample_inventory, item_number):
+    # Arrange
+    original_inventory = [item.copy() for item in sample_inventory]
+
+    # Act
+    result = update_item_quantity(sample_inventory, item_number, 10)
+
+    # Assert
+    assert result is False
+    assert sample_inventory == original_inventory
+
+
+def test_update_negative_quantity(sample_inventory):
+    # Arrange
+    original_inventory = [item.copy() for item in sample_inventory]
+
+    # Act
+    result = update_item_quantity(sample_inventory, 1, -5)
+
+    # Assert
+    assert result is False
+    assert sample_inventory == original_inventory
+
+
+# --------------------------------------------------
+# Add-Item Validation Tests
+# --------------------------------------------------
+
+def test_validate_normal_item(sample_inventory):
+    # Arrange
+    name = "Wrench"
+    category = "Tools"
+    quantity = 8
+
+    # Act
+    result = validate_new_item(
+        sample_inventory, name, category, quantity
+    )
+
+    # Assert
+    assert result is True
+
+
+@pytest.mark.parametrize(
+    "name, category, quantity",
+    [
+        ("", "Tools", 5),
+        ("   ", "Tools", 5),
+        ("Hammer", "", 5),
+        ("Hammer", "   ", 5),
+        ("Bad|Name", "Tools", 5),
+        ("Wrench", "Bad|Category", 5),
+        ("Wrench", "Tools", -1),
+        ("Hammer", "Tools", 5),
+        ("hAmMeR", "Tools", 5)
+    ],
+    ids=[
+        "empty-name",
+        "whitespace-name",
+        "empty-category",
+        "whitespace-category",
+        "separator-in-name",
+        "separator-in-category",
+        "negative-quantity",
+        "duplicate-name",
+        "duplicate-different-capitalization"
+    ]
+)
+def test_validate_invalid_item(
+    sample_inventory, name, category, quantity
+):
+    # Arrange
+    inventory = sample_inventory
+
+    # Act
+    result = validate_new_item(inventory, name, category, quantity)
+
+    # Assert
+    assert result is False
+
+
+@pytest.mark.parametrize(
+    "quantity",
+    ["five", "5", 5.5, True],
+    ids=["text", "numeric-string", "decimal", "boolean"]
+)
+def test_validate_invalid_quantity(sample_inventory, quantity):
+    # Arrange
+    name = "Wrench"
+    category = "Tools"
+
+    # Act
+    result = validate_new_item(
+        sample_inventory, name, category, quantity
+    )
+
+    # Assert
+    assert result is False
